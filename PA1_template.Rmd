@@ -1,25 +1,131 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "Assignment 1"
+
+output: html_document
 ---
 
+# Loading and preprocessing the data
 
-## Loading and preprocessing the data
+```{r, message=FALSE}
+library(ggplot2)
+library(mice)
+library(gridExtra)
+
+```
+
+###1.Load the data 
+Here I am  assuming that the csv file needed is in the directory
+```{r}
+df<-read.table("activity.csv", header = TRUE, sep = ",", na.strings = "NA")
+
+head(df)
+```
+
+#What is mean total number of steps taken per day?
+
+###1.Calculate the total number of steps taken per day
+
+```{r}
+stepsByDay <- with(df, tapply(steps, date, FUN=sum, na.rm=TRUE))
+head(stepsByDay)
+```
+
+###2.Make a histogram of the total number of steps taken each day
+
+```{r}
+qplot(stepsByDay, binwidth=1000, xlab="Number Of Steps", 
+      ylab= "Number Of Days", main = "Total Number Of Steps Taken Each Day")
+
+```
+
+###3.Calculate and report the mean and median of the total number of steps taken per day
+
+```{r, echo=FALSE}
+men<-mean(stepsByDay, na.rm=TRUE)
+
+```
+
+```{r,echo=FALSE}
+med<- median(stepsByDay, na.rm=TRUE)
+
+```
+
+The Mean Steps taken is **`r men`** and The Median is **`r med`**
+
+#What is the average daily activity pattern?
+
+###1.Make a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)
+
+```{r}
+meansteps <- aggregate(steps ~ interval, df, mean)
+plot(meansteps$interval,meansteps$steps, type = "l", xlab="Interval", ylab="Average Steps", main="Daily Activity Pattern")
 
 
+```
 
-## What is mean total number of steps taken per day?
+###2.Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+
+```{r}
+meansteps[which.max(meansteps$steps),]
+
+```
+
+#Imputing missing values
+
+###1.Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with NAs)
+
+```{r}
+md.pattern(df)
+length(which(is.na(df$steps)))
+
+```
+
+###2.Devise a strategy for filling in all of the missing values in the dataset
+Insert the mean steps accoding to interval into the missing values
 
 
+###3.Create a new dataset that is equal to the original dataset but with the missing data filled in
 
-## What is the average daily activity pattern?
+```{r}
+df$imputed <- ifelse( is.na(df$steps), meansteps$steps, df$steps)
+df2 <- df[,c(4,2,3)]
+names(df2)[1]<- "steps"
+head(df2)
+
+```
+
+###4.Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day. Do these values differ from the estimates from the first part of the assignment? What is the impact
+
+```{r}
+stepsByDay2 <- tapply(df2$steps, df2$date, FUN=sum, na.rm=TRUE)
+plot1<- qplot(stepsByDay, binwidth=1000, xlab="Number Of Steps", 
+      ylab= "Number Of Days", main = "Not Imputed")
+plot2<- qplot(stepsByDay2, binwidth=1000, xlab="Number Of Steps", 
+     ylab= "Number Of Days", main = "Imputed")
+grid.arrange(plot1, plot2, ncol=2)
+
+```
+
+#Are there differences in activity patterns between weekdays and weekends?
+
+###1.Create a new factor variable in the dataset with two levels - "weekday" and "weekend" indicating whether a given date is a weekday or weekend day.
+
+```{r}
+df2$date<-strptime(df2$date, "%Y-%m-%d")
+weekend <- c("Saturday", "Sunday")
+
+df2$days <- factor((weekdays(df2$date) %in% weekend), 
+                   levels=c(TRUE, FALSE), labels=c('weekend', 'weekday'))
 
 
+```
 
-## Imputing missing values
+###2.Make a panel plot containing a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis). See the README file in the GitHub repository to see an example of what this plot should look like using simulated data.
 
+```{r}
+meanbydays <- aggregate(steps ~ interval + days, df2, mean)
+ggplot(meanbydays, aes(interval, steps)) + geom_line() + facet_grid(days ~ .) +
+    xlab("Interval") + ylab("Steps")
 
+```
 
-## Are there differences in activity patterns between weekdays and weekends?
