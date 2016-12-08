@@ -8,7 +8,7 @@ output: html_document
 
 ```{r, message=FALSE}
 library(ggplot2)
-
+library(knitr)
 ```
 
 ###1.Load the data 
